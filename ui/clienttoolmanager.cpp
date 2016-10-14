@@ -171,6 +171,29 @@ ClientToolManager::ClientToolManager(QObject *parent)
 
     initPluginRepository();
 
+    connect(Endpoint::instance(), &Endpoint::disconnected, this, &ClientToolManager::onDisconnected);
+    connect(Endpoint::instance(), &Endpoint::connectionEstablished, this, &ClientToolManager::onConnected);
+}
+
+ClientToolManager::~ClientToolManager()
+{
+    for (auto it = m_widgets.constBegin(); it != m_widgets.constEnd(); ++it)
+        delete it.value().data();
+    s_instance = Q_NULLPTR;
+}
+
+void ClientToolManager::onDisconnected()
+{
+    emit aboutToReset();
+    for (auto it = m_widgets.constBegin(); it != m_widgets.constEnd(); ++it)
+        delete it.value().data();
+    m_tools.clear();
+    m_remote = 0;
+    emit reset();
+}
+
+void ClientToolManager::onConnected()
+{
     m_remote = ObjectBroker::object<ToolManagerInterface *>();
 
     connect(m_remote, SIGNAL(availableToolsResponse(QVector<GammaRay::ToolData>)),
@@ -182,13 +205,6 @@ ClientToolManager::ClientToolManager(QObject *parent)
     connect(m_remote, SIGNAL(toolsForObjectResponse(GammaRay::ObjectId,QVector<QString>)),
             this, SLOT(toolsForObjectReceived(GammaRay::ObjectId,QVector<QString>)));
     m_remote->requestAvailableTools();
-}
-
-ClientToolManager::~ClientToolManager()
-{
-    for (auto it = m_widgets.constBegin(); it != m_widgets.constEnd(); ++it)
-        delete it.value().data();
-    s_instance = Q_NULLPTR;
 }
 
 void ClientToolManager::setToolParentWidget(QWidget *parent)
@@ -242,8 +258,10 @@ void ClientToolManager::gotTools(const QVector<GammaRay::ToolData> &tools)
     }
     emit toolListAvailable();
 
-    disconnect(m_remote, SIGNAL(availableToolsResponse(QVector<GammaRay::ToolData>)),
-               this, SLOT(gotTools(QVector<GammaRay::ToolData>)));
+    if (m_remote) {
+        disconnect(m_remote, SIGNAL(availableToolsResponse(QVector<GammaRay::ToolData>)),
+                   this, SLOT(gotTools(QVector<GammaRay::ToolData>)));
+    }
 }
 
 bool ClientToolManager::isToolListLoaded() const
@@ -267,11 +285,17 @@ QItemSelectionModel *ClientToolManager::selectionModel()
 
 void ClientToolManager::requestToolsForObject(const ObjectId &id)
 {
+    if (!m_remote) {
+        return;
+    }
     m_remote->requestToolsForObject(id);
 }
 
 void ClientToolManager::selectObject(const ObjectId &id, const ToolInfo &toolInfo)
 {
+    if (!m_remote) {
+        return;
+    }
     m_remote->selectObject(id, toolInfo.id());
 }
 

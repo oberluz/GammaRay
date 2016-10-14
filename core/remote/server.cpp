@@ -134,6 +134,8 @@ void Server::newConnection()
     setDevice(con);
 
     sendServerGreeting();
+
+    emit connectionEstablished();
 }
 
 void Server::sendServerGreeting()

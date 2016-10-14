@@ -116,12 +116,16 @@ signals:
     void toolSelected(const QString &toolId);
     void toolSelectedByIndex(int index);
     void toolsForObjectResponse(const GammaRay::ObjectId &id, const QVector<GammaRay::ToolInfo> &toolInfos);
+    void aboutToReset();
+    void reset();
 
 private slots:
     void gotTools(const QVector<GammaRay::ToolData> &tools);
     void toolGotEnabled(const QString &toolId);
     void toolGotSelected(const QString &toolId);
     void toolsForObjectReceived(const GammaRay::ObjectId &id, const QVector<QString> &toolIds);
+    void onConnected();
+    void onDisconnected();
 
 private:
     typedef QHash<QString, QPointer<QWidget> > WidgetsHash;
